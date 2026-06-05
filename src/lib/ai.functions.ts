@@ -78,6 +78,7 @@ const EmailSchema = z.object({
 export const generateEmail = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => EmailSchema.parse(input))
   .handler(async ({ data }) => {
+    enforceRateLimit();
     const system = `You are an expert business writer. Generate a polished email with these requirements:
 - Tone: ${data.tone}
 - Audience: ${data.audience}
@@ -100,6 +101,7 @@ const NotesSchema = z.object({
 export const summarizeMeeting = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => NotesSchema.parse(input))
   .handler(async ({ data }) => {
+    enforceRateLimit();
     const system = `You are an expert meeting analyst. Given raw meeting notes or a transcript, produce a structured markdown summary with EXACTLY these sections:
 
 ## Summary
@@ -133,6 +135,7 @@ const PlannerSchema = z.object({
 export const planTasks = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => PlannerSchema.parse(input))
   .handler(async ({ data }) => {
+    enforceRateLimit();
     const system = `You are an expert productivity coach using the Eisenhower Matrix and time-blocking. Given a list of tasks and a timeframe, produce a structured markdown plan:
 
 ## Prioritized Tasks
@@ -161,6 +164,7 @@ const ResearchSchema = z.object({
 export const researchTopic = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => ResearchSchema.parse(input))
   .handler(async ({ data }) => {
+    enforceRateLimit();
     const lenHint =
       data.depth === "Brief" ? "~200 words" : data.depth === "Standard" ? "~450 words" : "~800 words";
     const system = `You are a senior research analyst. Produce a structured markdown research brief (${lenHint}) with these sections:
@@ -195,6 +199,7 @@ const ChatSchema = z.object({
 export const chat = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) => ChatSchema.parse(input))
   .handler(async ({ data }) => {
+    enforceRateLimit();
     const system = `You are a helpful AI workplace productivity assistant. Help professionals with writing, planning, research, summarization, and general work tasks. Be concise, structured, and practical. Use markdown formatting when helpful.`;
     const content = await callAI([
       { role: "system", content: system },
