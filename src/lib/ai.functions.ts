@@ -1,5 +1,44 @@
 import { createServerFn } from "@tanstack/react-start";
+import { getRequestHeader, getRequestIP } from "@tanstack/react-start/server";
 import { z } from "zod";
+
+// Per-IP rate limiting to prevent unauthenticated abuse of AI credits.
+// Token bucket: each IP gets MAX_REQUESTS per WINDOW_MS.
+const WINDOW_MS = 60_000;
+const MAX_REQUESTS = 10;
+const ipHits = new Map<string, { count: number; reset: number }>();
+
+function enforceRateLimit() {
+  let ip: string | undefined;
+  try {
+    ip = getRequestIP({ xForwardedFor: true }) ?? undefined;
+  } catch {
+    ip = undefined;
+  }
+  if (!ip) {
+    ip =
+      getRequestHeader("cf-connecting-ip") ??
+      getRequestHeader("x-real-ip") ??
+      getRequestHeader("x-forwarded-for")?.split(",")[0]?.trim() ??
+      "unknown";
+  }
+  const now = Date.now();
+  const entry = ipHits.get(ip);
+  if (!entry || entry.reset < now) {
+    ipHits.set(ip, { count: 1, reset: now + WINDOW_MS });
+    return;
+  }
+  if (entry.count >= MAX_REQUESTS) {
+    throw new Error("Rate limit exceeded. Please wait a minute and try again.");
+  }
+  entry.count++;
+
+  // Opportunistic cleanup to bound memory.
+  if (ipHits.size > 5000) {
+    for (const [k, v] of ipHits) if (v.reset < now) ipHits.delete(k);
+  }
+}
+
 
 const GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
 const DEFAULT_MODEL = "google/gemini-3-flash-preview";
